@@ -513,23 +513,24 @@ function shareResult() {
   const accuracy = total ? Math.round((greats + goods) / total * 100) : 0;
   const grade = document.getElementById('resultGrade').textContent;
   const levelReached = LEVELS[getLevel(currentRound - 1)].name;
-  const text = `⚡ Skill Check\n🏆 Score: ${score} | Grade: ${grade}\n🎯 Round: ${currentRound} | Level: ${levelReached}\n✨ Accuracy: ${accuracy}% | Combo: ${maxCombo}\n\nCan you beat my score?`;
+  const shareUrl = `https://salmon-tools-api.harpy922.workers.dev/share/skillcheck?s=${score}&g=${grade}&r=${currentRound}&l=${levelReached}&a=${accuracy}&mc=${maxCombo}&gr=${greats}&go=${goods}&m=${misses}`;
   const btn = event.target;
+  const copyText = shareUrl;
   if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(text).then(() => {
-      btn.textContent = '✅ Copied!';
-      setTimeout(() => btn.textContent = '📤 Share', 1500);
+    navigator.clipboard.writeText(copyText).then(() => {
+      btn.textContent = '✅ Link Copied!';
+      setTimeout(() => btn.textContent = '📤 Share', 2000);
     });
   } else {
     const ta = document.createElement('textarea');
-    ta.value = text;
+    ta.value = copyText;
     ta.style.cssText = 'position:fixed;left:-9999px';
     document.body.appendChild(ta);
     ta.select();
     document.execCommand('copy');
     document.body.removeChild(ta);
-    btn.textContent = '✅ Copied!';
-    setTimeout(() => btn.textContent = '📤 Share', 1500);
+    btn.textContent = '✅ Link Copied!';
+    setTimeout(() => btn.textContent = '📤 Share', 2000);
   }
 }
 
@@ -567,10 +568,45 @@ document.addEventListener('keydown', handleInput);
 canvas.addEventListener('click', handleInput);
 canvas.addEventListener('touchstart', e => { e.preventDefault(); handleInput(e); }, { passive: false });
 
+// 공유 링크로 접속 시 결과 표시
+function checkSharedResult() {
+  const p = new URLSearchParams(window.location.search);
+  if (!p.has('s')) return false;
+  const sharedScore = p.get('s') || '0';
+  const sharedGrade = p.get('g') || '?';
+  const sharedRound = p.get('r') || '0';
+  const sharedLevel = p.get('l') || 'EASY';
+  const sharedAccuracy = p.get('a') || '0';
+  const sharedMaxCombo = p.get('mc') || '0';
+  const sharedGreats = p.get('gr') || '0';
+  const sharedGoods = p.get('go') || '0';
+  const sharedMisses = p.get('m') || '0';
+
+  document.getElementById('resultGrade').textContent = sharedGrade;
+  document.getElementById('resultGrade').className = 'result-grade ' + sharedGrade;
+  document.getElementById('resultStats').innerHTML = `
+    <div style="font-size:0.8em;color:var(--accent);margin-bottom:8px;">👆 Someone shared their result!</div>
+    <div>Score: <span class="val">${sharedScore}</span></div>
+    <div>Round: <span class="val">${sharedRound}</span></div>
+    <div>Level Reached: <span class="val">${sharedLevel}</span></div>
+    <div>Accuracy: <span class="val">${sharedAccuracy}%</span></div>
+    <div style="color:var(--great)">✨ Great: <span class="val">${sharedGreats}</span></div>
+    <div style="color:var(--good)">👍 Good: <span class="val">${sharedGoods}</span></div>
+    <div style="color:#666">💨 Miss: <span class="val">${sharedMisses}</span></div>
+    <div>Max Combo: <span class="val">${sharedMaxCombo}</span></div>
+  `;
+  document.getElementById('resultOverlay').classList.add('show');
+  document.getElementById('startHint').style.display = 'none';
+  // URL 정리
+  history.replaceState(null, '', window.location.pathname);
+  return true;
+}
+
 // 초기화
 loadBest();
 renderLives();
 renderIdle();
+checkSharedResult();
 </script>
 
 </body>
