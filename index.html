@@ -255,6 +255,7 @@ gtag('config', 'G-02ZYJCHFRM');
 </div>
 
 <script>
+const API_BASE = 'https://salmon-tools-api.harpy922.workers.dev';
 const canvas = document.getElementById('ring');
 const ctx = canvas.getContext('2d');
 const W = canvas.width, H = canvas.height;
@@ -522,8 +523,19 @@ function flashCanvas(color) {
   setTimeout(() => canvas.style.filter = '', 200);
 }
 
+// HMAC 서명
+const _SK = [115,107,95,115,97,108,109,111,110,95,50,48,50,54,95,120,75,57,109,80];
+async function signScore(payload) {
+  const key = await crypto.subtle.importKey(
+    'raw', new Uint8Array(_SK),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 // 결과
-function showResult() {
+async function showResult() {
   state = 'result';
   cancelAnimationFrame(animId);
 
@@ -551,8 +563,29 @@ function showResult() {
     <div style="color:var(--good)">👍 Good: <span class="val">${goods}</span></div>
     <div style="color:#666">💨 Miss: <span class="val">${misses}</span></div>
     <div>Max Combo: <span class="val">${maxCombo}</span></div>
+    <div id="percentile-row" style="margin-top:8px;color:var(--accent);">🌍 <span id="percentile-text">Ranking...</span></div>
   `;
   document.getElementById('resultOverlay').classList.add('show');
+
+  // 서버에 점수 전송
+  try {
+    const ts = Date.now();
+    const payload = `${score}:${currentRound}:${greats}:${goods}:${misses}:${maxCombo}:${ts}`;
+    const token = await signScore(payload);
+    const res = await fetch(API_BASE + '/api/skillcheck/score', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ score, round: currentRound, greats, goods, misses, maxCombo, token, ts }),
+    });
+    const data = await res.json();
+    if (data.percentile) {
+      document.getElementById('percentile-text').textContent = `Top ${data.percentile}% (${data.totalPlayers} players)`;
+    } else {
+      document.getElementById('percentile-row').style.display = 'none';
+    }
+  } catch {
+    document.getElementById('percentile-row').style.display = 'none';
+  }
 }
 
 function shareResult() {
