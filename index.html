@@ -153,11 +153,13 @@ gtag('config', 'G-02ZYJCHFRM');
   }
   .result-overlay.show { display: flex; }
   .result-grade { font-size: 5em; font-weight: 900; }
-  .result-grade.S { color: #ff4466; text-shadow: 0 0 40px #ff4466; }
-  .result-grade.A { color: #ffd700; text-shadow: 0 0 30px #ffd700; }
-  .result-grade.B { color: #4ade80; text-shadow: 0 0 30px #4ade80; }
-  .result-grade.C { color: #60a5fa; text-shadow: 0 0 20px #60a5fa; }
-  .result-grade.D { color: #888; }
+  .result-grade.challenger { color: #ff4466; text-shadow: 0 0 40px #ff4466; }
+  .result-grade.master { color: #c084fc; text-shadow: 0 0 30px #c084fc; }
+  .result-grade.diamond { color: #67e8f9; text-shadow: 0 0 30px #67e8f9; }
+  .result-grade.gold { color: #ffd700; text-shadow: 0 0 20px #ffd700; }
+  .result-grade.silver { color: #c0c0c0; text-shadow: 0 0 15px #c0c0c0; }
+  .result-grade.bronze { color: #cd7f32; }
+  .result-grade { font-size: 1.8em; }
   .result-stats {
     text-align: center;
     font-size: 1.1em;
@@ -542,17 +544,18 @@ async function showResult() {
   const total = greats + goods + misses;
   const accuracy = total ? Math.round((greats + goods) / total * 100) : 0;
 
-  let grade;
-  if (score >= 30000 && accuracy >= 95 && currentRound >= 50) grade = 'S';
-  else if (score >= 18000 && accuracy >= 88 && currentRound >= 35) grade = 'A';
-  else if (score >= 10000 && accuracy >= 80 && currentRound >= 20) grade = 'B';
-  else if (score >= 4000 && currentRound >= 10) grade = 'C';
-  else grade = 'D';
+  let grade, gradeLabel, gradeCls;
+  if (score >= 30000 && accuracy >= 95 && currentRound >= 50)      { grade = 'challenger'; gradeLabel = '🏆 Challenger'; }
+  else if (score >= 18000 && accuracy >= 88 && currentRound >= 35) { grade = 'master';     gradeLabel = '👑 Master'; }
+  else if (score >= 10000 && accuracy >= 80 && currentRound >= 20) { grade = 'diamond';    gradeLabel = '💎 Diamond'; }
+  else if (score >= 5000 && accuracy >= 70 && currentRound >= 12)  { grade = 'gold';       gradeLabel = '🥇 Gold'; }
+  else if (score >= 2000 && currentRound >= 7)                     { grade = 'silver';     gradeLabel = '🥈 Silver'; }
+  else                                                              { grade = 'bronze';     gradeLabel = '🥉 Bronze'; }
 
   const isNew = saveBest();
   const levelReached = LEVELS[getLevel(currentRound - 1)].name;
 
-  document.getElementById('resultGrade').textContent = grade;
+  document.getElementById('resultGrade').textContent = gradeLabel;
   document.getElementById('resultGrade').className = 'result-grade ' + grade;
   document.getElementById('resultStats').innerHTML = `
     <div>Score: <span class="val">${score}</span> ${isNew ? '🏆 NEW BEST!' : ''}</div>
@@ -591,9 +594,9 @@ async function showResult() {
 function shareResult() {
   const total = greats + goods + misses;
   const accuracy = total ? Math.round((greats + goods) / total * 100) : 0;
-  const grade = document.getElementById('resultGrade').textContent;
+  const gradeText = document.getElementById('resultGrade').className.split(' ')[1] || 'bronze';
   const levelReached = LEVELS[getLevel(currentRound - 1)].name;
-  const shareUrl = `https://salmon-tools-api.harpy922.workers.dev/share/skillcheck?s=${score}&g=${grade}&r=${currentRound}&l=${levelReached}&a=${accuracy}&mc=${maxCombo}&gr=${greats}&go=${goods}&m=${misses}`;
+  const shareUrl = `https://salmon-tools-api.harpy922.workers.dev/share/skillcheck?s=${score}&g=${encodeURIComponent(gradeText)}&r=${currentRound}&l=${levelReached}&a=${accuracy}&mc=${maxCombo}&gr=${greats}&go=${goods}&m=${misses}`;
   const btn = event.target;
   const copyText = shareUrl;
   if (navigator.clipboard && window.isSecureContext) {
@@ -662,7 +665,8 @@ function checkSharedResult() {
   const sharedGoods = p.get('go') || '0';
   const sharedMisses = p.get('m') || '0';
 
-  document.getElementById('resultGrade').textContent = sharedGrade;
+  const gradeLabelsMap = { challenger:'🏆 Challenger', master:'👑 Master', diamond:'💎 Diamond', gold:'🥇 Gold', silver:'🥈 Silver', bronze:'🥉 Bronze' };
+  document.getElementById('resultGrade').textContent = gradeLabelsMap[sharedGrade] || sharedGrade;
   document.getElementById('resultGrade').className = 'result-grade ' + sharedGrade;
   document.getElementById('resultStats').innerHTML = `
     <div style="font-size:0.8em;color:var(--accent);margin-bottom:8px;">👆 Someone shared their result!</div>
