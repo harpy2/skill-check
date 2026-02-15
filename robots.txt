@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://skillcheck.salmonholic.com/sitemap.xml
