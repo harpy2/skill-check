@@ -612,7 +612,7 @@ function handleInput(e) {
 }
 
 document.addEventListener('keydown', handleInput);
-canvas.addEventListener('click', handleInput);
+canvas.addEventListener('mousedown', handleInput);
 canvas.addEventListener('touchstart', e => { e.preventDefault(); handleInput(e); }, { passive: false });
 
 // 공유 링크로 접속 시 결과 표시
