@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skill Check — Timing Test Challenge</title>
+<meta name="description" content="Test your timing skills with this Dead by Daylight inspired skill check challenge. How precise are you?">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #141420;
+    --accent: #ff4466;
+    --great: #ff4466;
+    --good: #ffd700;
+    --miss: #333;
+    --text: #eee;
+    --text2: #888;
+    --success: #4ade80;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  h1 { font-size: 1.8em; margin-bottom: 4px; letter-spacing: -0.5px; }
+  .subtitle { color: var(--text2); font-size: 0.9em; margin-bottom: 24px; }
+
+  .game-area {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  canvas { cursor: pointer; }
+
+  /* HUD */
+  .hud {
+    display: flex;
+    gap: 32px;
+    font-size: 0.9em;
+    color: var(--text2);
+  }
+  .hud .val { color: var(--text); font-weight: 700; font-size: 1.1em; }
+  .hud .combo.hot .val { color: var(--accent); }
+
+  /* 난이도 표시 */
+  .level-badge {
+    font-size: 0.85em;
+    font-weight: 700;
+    padding: 4px 14px;
+    border-radius: 20px;
+    transition: all 0.3s;
+    margin-bottom: 8px;
+  }
+  .level-easy { background: rgba(74,222,128,0.15); color: #4ade80; border: 1px solid rgba(74,222,128,0.3); }
+  .level-normal { background: rgba(96,165,250,0.15); color: #60a5fa; border: 1px solid rgba(96,165,250,0.3); }
+  .level-hard { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+  .level-insane { background: rgba(255,68,102,0.15); color: #ff4466; border: 1px solid rgba(255,68,102,0.3); }
+  .level-nightmare { background: rgba(192,132,252,0.15); color: #c084fc; border: 1px solid rgba(192,132,252,0.3); }
+
+  /* 라이프 */
+  .lives {
+    font-size: 1.4em;
+    letter-spacing: 4px;
+    min-height: 30px;
+    margin-bottom: 4px;
+  }
+  .lives .lost { opacity: 0.2; }
+
+  /* 피드백 */
+  .feedback {
+    font-size: 1.6em;
+    font-weight: 800;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.15s;
+  }
+  .feedback.great { color: var(--great); text-shadow: 0 0 20px var(--great); }
+  .feedback.good { color: var(--good); text-shadow: 0 0 20px var(--good); }
+  .feedback.miss { color: #666; }
+
+  /* 결과 화면 */
+  .result-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 10;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+  .result-overlay.show { display: flex; }
+  .result-grade { font-size: 5em; font-weight: 900; }
+  .result-grade.S { color: #ff4466; text-shadow: 0 0 40px #ff4466; }
+  .result-grade.A { color: #ffd700; text-shadow: 0 0 30px #ffd700; }
+  .result-grade.B { color: #4ade80; text-shadow: 0 0 30px #4ade80; }
+  .result-grade.C { color: #60a5fa; text-shadow: 0 0 20px #60a5fa; }
+  .result-grade.D { color: #888; }
+  .result-stats {
+    text-align: center;
+    font-size: 1.1em;
+    line-height: 2;
+    color: var(--text2);
+  }
+  .result-stats .val { color: var(--text); font-weight: 700; }
+  .retry-btn {
+    margin-top: 12px;
+    padding: 14px 40px;
+    border: none;
+    border-radius: 12px;
+    background: var(--accent);
+    color: white;
+    font-size: 1.1em;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+  .retry-btn:hover { transform: scale(1.05); }
+  .retry-btn:active { transform: scale(0.97); }
+
+  .start-hint {
+    color: var(--text2);
+    font-size: 0.9em;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+  .best-score {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    font-size: 0.8em;
+    color: var(--text2);
+    text-align: right;
+  }
+  .best-score .val { color: var(--good); font-weight: 700; }
+
+  /* 화면 흔들림 */
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+  .shake { animation: shake 0.3s ease; }
+
+  /* 레벨업 효과 */
+  .level-up-flash {
+    position: fixed;
+    inset: 0;
+    background: rgba(255,255,255,0.05);
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .level-up-flash.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<h1>⚡ Skill Check</h1>
+<p class="subtitle">How precise is your timing?</p>
+
+<div class="level-badge level-easy" id="levelBadge">EASY</div>
+<div class="lives" id="lives">❤️❤️❤️</div>
+
+<div class="game-area">
+  <canvas id="ring" width="280" height="280"></canvas>
+  <div class="feedback" id="feedback"></div>
+  <div class="hud">
+    <div>Score <span class="val" id="score">0</span></div>
+    <div class="combo" id="comboWrap">Combo <span class="val" id="combo">0</span></div>
+    <div>Round <span class="val" id="round">0</span></div>
+  </div>
+</div>
+
+<div class="start-hint" id="startHint">Press SPACE or tap to start</div>
+
+<div class="best-score" id="bestScoreArea">
+  Best: <span class="val" id="bestScore">-</span><br>
+  Best Round: <span class="val" id="bestRound">-</span>
+</div>
+
+<div class="level-up-flash" id="levelFlash"></div>
+
+<div class="result-overlay" id="resultOverlay">
+  <div class="result-grade" id="resultGrade">S</div>
+  <div class="result-stats" id="resultStats"></div>
+  <button class="retry-btn" onclick="startGame()">🔄 Retry</button>
+  <button class="retry-btn" style="background:transparent;border:2px solid #444;color:var(--text2);font-size:0.9em;padding:10px 24px;" onclick="shareResult()">📤 Share</button>
+</div>
+
+<script>
+const canvas = document.getElementById('ring');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+const CX = W / 2, CY = H / 2, R = 110;
+
+// 난이도 단계 (라운드에 따라 자동 진행)
+const LEVELS = [
+  { name: 'EASY',      cls: 'level-easy',      speed: 2.5, goodAngle: 50, greatAngle: 15, until: 10 },
+  { name: 'NORMAL',    cls: 'level-normal',     speed: 3.5, goodAngle: 42, greatAngle: 11, until: 25 },
+  { name: 'HARD',      cls: 'level-hard',       speed: 5,   goodAngle: 34, greatAngle: 8,  until: 45 },
+  { name: 'INSANE',    cls: 'level-insane',     speed: 7,   goodAngle: 26, greatAngle: 5,  until: 70 },
+  { name: 'NIGHTMARE', cls: 'level-nightmare',  speed: 9,   goodAngle: 20, greatAngle: 3,  until: Infinity },
+];
+
+let level = 0;
+let conf = LEVELS[0];
+
+// 게임 상태
+let state = 'idle';
+let needle = 0;
+let targetStart = 0;
+let greatStart = 0;
+let score = 0;
+let combo = 0;
+let maxCombo = 0;
+let currentRound = 0;
+let lives = 3;
+let greats = 0;
+let goods = 0;
+let misses = 0;
+let animId = null;
+let lastTime = 0;
+let direction = 1;
+
+// 현재 라운드에 맞는 레벨 계산
+function getLevel(round) {
+  for (let i = 0; i < LEVELS.length; i++) {
+    if (round < LEVELS[i].until) return i;
+  }
+  return LEVELS.length - 1;
+}
+
+function updateLevel() {
+  const newLevel = getLevel(currentRound);
+  if (newLevel !== level) {
+    level = newLevel;
+    conf = LEVELS[level];
+    const badge = document.getElementById('levelBadge');
+    badge.textContent = conf.name;
+    badge.className = 'level-badge ' + conf.cls;
+    // 레벨업 이펙트
+    const flash = document.getElementById('levelFlash');
+    flash.classList.add('show');
+    setTimeout(() => flash.classList.remove('show'), 400);
+  }
+}
+
+// 라이프 렌더
+function renderLives() {
+  const el = document.getElementById('lives');
+  let html = '';
+  for (let i = 0; i < 3; i++) {
+    html += i < lives ? '❤️' : '<span class="lost">🖤</span>';
+  }
+  el.innerHTML = html;
+}
+
+// 베스트 스코어
+function loadBest() {
+  document.getElementById('bestScore').textContent = localStorage.getItem('skillcheck-best-score') || '-';
+  document.getElementById('bestRound').textContent = localStorage.getItem('skillcheck-best-round') || '-';
+}
+function saveBest() {
+  let isNew = false;
+  const prevScore = parseInt(localStorage.getItem('skillcheck-best-score') || '0');
+  if (score > prevScore) {
+    localStorage.setItem('skillcheck-best-score', score);
+    document.getElementById('bestScore').textContent = score;
+    isNew = true;
+  }
+  const prevRound = parseInt(localStorage.getItem('skillcheck-best-round') || '0');
+  if (currentRound > prevRound) {
+    localStorage.setItem('skillcheck-best-round', currentRound);
+    document.getElementById('bestRound').textContent = currentRound;
+    isNew = true;
+  }
+  return isNew;
+}
+
+// 타겟 생성
+function newTarget() {
+  updateLevel();
+  conf = LEVELS[level];
+  // 라운드 내 미세 속도 증가
+  const microSpeed = conf.speed + (currentRound * 0.03);
+  targetStart = Math.random() * 360;
+  greatStart = targetStart + Math.random() * (conf.goodAngle - conf.greatAngle);
+  needle = (targetStart + 180) % 360;
+  direction = Math.random() > 0.2 ? 1 : -1;
+  return microSpeed;
+}
+
+let currentSpeed = 2.5;
+
+// 그리기
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  // 배경 원
+  ctx.beginPath();
+  ctx.arc(CX, CY, R, 0, Math.PI * 2);
+  ctx.strokeStyle = '#1a1a2a';
+  ctx.lineWidth = 20;
+  ctx.stroke();
+
+  // Good 구간
+  const goodStartA = (targetStart - 90) * Math.PI / 180;
+  const goodEndA = (targetStart + conf.goodAngle - 90) * Math.PI / 180;
+  ctx.beginPath();
+  ctx.arc(CX, CY, R, goodStartA, goodEndA);
+  ctx.strokeStyle = 'rgba(255, 215, 0, 0.5)';
+  ctx.lineWidth = 20;
+  ctx.stroke();
+
+  // Great 구간
+  const grStartA = (greatStart - 90) * Math.PI / 180;
+  const grEndA = (greatStart + conf.greatAngle - 90) * Math.PI / 180;
+  ctx.beginPath();
+  ctx.arc(CX, CY, R, grStartA, grEndA);
+  ctx.strokeStyle = 'rgba(255, 68, 102, 0.8)';
+  ctx.lineWidth = 20;
+  ctx.stroke();
+
+  // 눈금
+  for (let i = 0; i < 12; i++) {
+    const a = (i * 30 - 90) * Math.PI / 180;
+    ctx.beginPath();
+    ctx.moveTo(CX + Math.cos(a) * (R - 14), CY + Math.sin(a) * (R - 14));
+    ctx.lineTo(CX + Math.cos(a) * (R + 14), CY + Math.sin(a) * (R + 14));
+    ctx.strokeStyle = '#2a2a3a';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // 바늘
+  if (state === 'running') {
+    const na = (needle - 90) * Math.PI / 180;
+    const nx = CX + Math.cos(na) * (R - 18);
+    const ny = CY + Math.sin(na) * (R - 18);
+    const nx2 = CX + Math.cos(na) * (R + 18);
+    const ny2 = CY + Math.sin(na) * (R + 18);
+
+    ctx.beginPath(); ctx.moveTo(nx, ny); ctx.lineTo(nx2, ny2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 6; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(nx, ny); ctx.lineTo(nx2, ny2);
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.beginPath(); ctx.arc(nx2, ny2, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff'; ctx.fill();
+  }
+
+  // 중앙
+  ctx.beginPath();
+  ctx.arc(CX, CY, R - 24, 0, Math.PI * 2);
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fill();
+
+  ctx.font = state === 'idle' ? '600 14px -apple-system, sans-serif' : '700 28px -apple-system, sans-serif';
+  ctx.fillStyle = state === 'idle' ? '#555' : '#fff';
+  ctx.textAlign = 'center';
+  ctx.fillText(state === 'idle' ? 'READY' : score, CX, CY + 10);
+}
+
+function renderIdle() {
+  state = 'idle';
+  targetStart = 45;
+  greatStart = 55;
+  conf = LEVELS[0];
+  draw();
+}
+
+// 게임 루프
+function gameLoop(ts) {
+  if (state !== 'running') return;
+  if (!lastTime) lastTime = ts;
+  const dt = (ts - lastTime) / 1000;
+  lastTime = ts;
+  needle = (needle + currentSpeed * direction * dt * 60 + 360) % 360;
+  draw();
+  animId = requestAnimationFrame(gameLoop);
+}
+
+// 각도 범위 체크
+function inRange(n, start, angle) {
+  if (angle >= 360) return true;
+  const end = start + angle;
+  if (end <= 360) return n >= start && n <= end;
+  return n >= start || n <= end % 360;
+}
+
+// 판정
+function judge() {
+  if (state !== 'running') return;
+
+  const fb = document.getElementById('feedback');
+  const inGreat = inRange(needle, greatStart, conf.greatAngle);
+  const inGood = inRange(needle, targetStart, conf.goodAngle);
+
+  if (inGreat) {
+    combo++;
+    const pts = Math.round(150 * (1 + combo * 0.15));
+    score += pts;
+    greats++;
+    fb.textContent = '✨ GREAT! +' + pts;
+    fb.className = 'feedback great';
+    flashCanvas('#ff4466');
+  } else if (inGood) {
+    combo++;
+    const pts = Math.round(100 * (1 + combo * 0.08));
+    score += pts;
+    goods++;
+    fb.textContent = '👍 GOOD +' + pts;
+    fb.className = 'feedback good';
+    flashCanvas('#ffd700');
+  } else {
+    combo = 0;
+    lives--;
+    misses++;
+    fb.textContent = '💨 MISS';
+    fb.className = 'feedback miss';
+    renderLives();
+    // 화면 흔들림
+    document.body.classList.add('shake');
+    setTimeout(() => document.body.classList.remove('shake'), 300);
+  }
+
+  if (combo > maxCombo) maxCombo = combo;
+  document.getElementById('score').textContent = score;
+  document.getElementById('combo').textContent = combo;
+  document.getElementById('comboWrap').classList.toggle('hot', combo >= 3);
+
+  currentRound++;
+  document.getElementById('round').textContent = currentRound;
+
+  // 게임 오버 체크
+  if (lives <= 0) {
+    state = 'waiting';
+    setTimeout(showResult, 600);
+    return;
+  }
+
+  // 다음 라운드
+  state = 'waiting';
+  setTimeout(() => {
+    if (state === 'result') return;
+    currentSpeed = newTarget();
+    state = 'running';
+    lastTime = 0;
+    fb.textContent = '';
+    animId = requestAnimationFrame(gameLoop);
+  }, 500);
+}
+
+function flashCanvas(color) {
+  canvas.style.filter = `drop-shadow(0 0 20px ${color})`;
+  setTimeout(() => canvas.style.filter = '', 200);
+}
+
+// 결과
+function showResult() {
+  state = 'result';
+  cancelAnimationFrame(animId);
+
+  const total = greats + goods + misses;
+  const accuracy = total ? Math.round((greats + goods) / total * 100) : 0;
+
+  let grade;
+  if (currentRound >= 30 && accuracy >= 90) grade = 'S';
+  else if (currentRound >= 20 && accuracy >= 80) grade = 'A';
+  else if (currentRound >= 12 && accuracy >= 70) grade = 'B';
+  else if (currentRound >= 5) grade = 'C';
+  else grade = 'D';
+
+  const isNew = saveBest();
+  const levelReached = LEVELS[getLevel(currentRound - 1)].name;
+
+  document.getElementById('resultGrade').textContent = grade;
+  document.getElementById('resultGrade').className = 'result-grade ' + grade;
+  document.getElementById('resultStats').innerHTML = `
+    <div>Score: <span class="val">${score}</span> ${isNew ? '🏆 NEW BEST!' : ''}</div>
+    <div>Round: <span class="val">${currentRound}</span></div>
+    <div>Level Reached: <span class="val">${levelReached}</span></div>
+    <div>Accuracy: <span class="val">${accuracy}%</span></div>
+    <div style="color:var(--great)">✨ Great: <span class="val">${greats}</span></div>
+    <div style="color:var(--good)">👍 Good: <span class="val">${goods}</span></div>
+    <div style="color:#666">💨 Miss: <span class="val">${misses}</span></div>
+    <div>Max Combo: <span class="val">${maxCombo}</span></div>
+  `;
+  document.getElementById('resultOverlay').classList.add('show');
+}
+
+function shareResult() {
+  const total = greats + goods + misses;
+  const accuracy = total ? Math.round((greats + goods) / total * 100) : 0;
+  const grade = document.getElementById('resultGrade').textContent;
+  const levelReached = LEVELS[getLevel(currentRound - 1)].name;
+  const text = `⚡ Skill Check\n🏆 Score: ${score} | Grade: ${grade}\n🎯 Round: ${currentRound} | Level: ${levelReached}\n✨ Accuracy: ${accuracy}% | Combo: ${maxCombo}\n\nCan you beat my score?`;
+  const btn = event.target;
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = '✅ Copied!';
+      setTimeout(() => btn.textContent = '📤 Share', 1500);
+    });
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;left:-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    btn.textContent = '✅ Copied!';
+    setTimeout(() => btn.textContent = '📤 Share', 1500);
+  }
+}
+
+// 게임 시작
+function startGame() {
+  document.getElementById('resultOverlay').classList.remove('show');
+  document.getElementById('startHint').style.display = 'none';
+  score = 0; combo = 0; maxCombo = 0; currentRound = 0;
+  lives = 3; greats = 0; goods = 0; misses = 0;
+  level = 0; conf = LEVELS[0];
+  const badge = document.getElementById('levelBadge');
+  badge.textContent = conf.name;
+  badge.className = 'level-badge ' + conf.cls;
+  document.getElementById('score').textContent = '0';
+  document.getElementById('combo').textContent = '0';
+  document.getElementById('round').textContent = '0';
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('comboWrap').classList.remove('hot');
+  renderLives();
+  currentSpeed = newTarget();
+  state = 'running';
+  lastTime = 0;
+  animId = requestAnimationFrame(gameLoop);
+}
+
+// 입력
+function handleInput(e) {
+  if (e.type === 'keydown' && e.code !== 'Space') return;
+  if (e.type === 'keydown') e.preventDefault();
+  if (state === 'idle') { startGame(); return; }
+  if (state === 'running') { judge(); return; }
+}
+
+document.addEventListener('keydown', handleInput);
+canvas.addEventListener('click', handleInput);
+canvas.addEventListener('touchstart', e => { e.preventDefault(); handleInput(e); }, { passive: false });
+
+// 초기화
+loadBest();
+renderLives();
+renderIdle();
+</script>
+
+</body>
+</html>
