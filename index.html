@@ -531,10 +531,10 @@ function showResult() {
   const accuracy = total ? Math.round((greats + goods) / total * 100) : 0;
 
   let grade;
-  if (currentRound >= 30 && accuracy >= 90) grade = 'S';
-  else if (currentRound >= 20 && accuracy >= 80) grade = 'A';
-  else if (currentRound >= 12 && accuracy >= 70) grade = 'B';
-  else if (currentRound >= 5) grade = 'C';
+  if (score >= 30000 && accuracy >= 95 && currentRound >= 50) grade = 'S';
+  else if (score >= 18000 && accuracy >= 88 && currentRound >= 35) grade = 'A';
+  else if (score >= 10000 && accuracy >= 80 && currentRound >= 20) grade = 'B';
+  else if (score >= 4000 && currentRound >= 10) grade = 'C';
   else grade = 'D';
 
   const isNew = saveBest();
